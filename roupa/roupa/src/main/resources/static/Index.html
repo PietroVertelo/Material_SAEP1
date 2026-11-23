@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Estoque de Roupas</title>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="topo">
+    <h2>Loja de <span>Roupas</span></h2>
+    <button onclick="sair()">Sair</button>
+</div>
+
+<div class="conteudo">
+    <!-- FORMULARIO (cadastrar / editar) -->
+    <div class="card">
+        <h3 id="tituloForm">Nova roupa</h3>
+        <input type="hidden" id="id">
+
+        <label>Tamanho</label>
+        <input id="tamanho" placeholder="P, M, G...">
+        <label>Cor</label>
+        <input id="cor" placeholder="Azul">
+        <label>Marca</label>
+        <input id="marca" placeholder="Nike">
+        <label>Especificação</label>
+        <input id="especificacao" placeholder="Camiseta algodão">
+
+        <button class="btn" onclick="salvar()">Salvar</button>
+        <button class="btn btn-sec" onclick="limpar()">Limpar</button>
+    </div>
+
+    <!-- CONSULTA -->
+    <div class="card">
+        <div class="busca">
+            <h3>Consulta de roupas</h3>
+            <input id="busca" placeholder="Buscar por marca, cor..." oninput="mostrarTabela()">
+            <span class="contador" id="contador">0 itens</span>
+        </div>
+
+        <table>
+            <thead>
+            <tr><th>ID</th><th>Tamanho</th><th>Cor</th><th>Marca</th><th>Especificação</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="tabela"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // se nao fez login, volta para a tela de login
+    if (!sessionStorage.getItem('logado')) {
+        window.location.href = 'login.html';
+    }
+
+    let roupas = [];
+
+    async function carregar() {
+        const resp = await fetch('/roupa');
+        roupas = await resp.json();
+        mostrarTabela();
+    }
+
+    function mostrarTabela() {
+        const filtro = document.getElementById('busca').value.toLowerCase();
+        const lista = roupas.filter(r =>
+            (r.tamanho + ' ' + r.cor + ' ' + r.marca + ' ' + r.especificacao).toLowerCase().includes(filtro)
+        );
+
+        const corpo = document.getElementById('tabela');
+        corpo.innerHTML = '';
+
+        if (lista.length === 0) {
+            corpo.innerHTML = '<tr><td colspan="6" class="vazio">Nenhuma roupa encontrada</td></tr>';
+        }
+
+        lista.forEach(r => {
+            corpo.innerHTML += `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.tamanho}</td>
+          <td>${r.cor}</td>
+          <td>${r.marca}</td>
+          <td>${r.especificacao}</td>
+          <td class="acoes">
+            <button class="editar" onclick="editar(${r.id})">Editar</button>
+            <button class="excluir" onclick="excluir(${r.id})">Excluir</button>
+          </td>
+        </tr>`;
+        });
+
+        document.getElementById('contador').innerText = lista.length + ' itens';
+    }
+
+    async function salvar() {
+        const id = document.getElementById('id').value;
+        const roupa = {
+            tamanho: document.getElementById('tamanho').value,
+            cor: document.getElementById('cor').value,
+            marca: document.getElementById('marca').value,
+            especificacao: document.getElementById('especificacao').value
+        };
+
+        // se tem id e UPDATE (PUT), se nao tem e INSERT (POST)
+        const url = id ? '/roupa/' + id : '/roupa';
+        const metodo = id ? 'PUT' : 'POST';
+
+        await fetch(url, {
+            method: metodo,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(roupa)
+        });
+
+        limpar();
+        carregar();
+    }
+
+    function editar(id) {
+        const r = roupas.find(x => x.id === id);
+        document.getElementById('id').value = r.id;
+        document.getElementById('tamanho').value = r.tamanho;
+        document.getElementById('cor').value = r.cor;
+        document.getElementById('marca').value = r.marca;
+        document.getElementById('especificacao').value = r.especificacao;
+        document.getElementById('tituloForm').innerText = 'Editando roupa #' + r.id;
+    }
+
+    async function excluir(id) {
+        if (!confirm('Excluir esta roupa?')) return;
+        await fetch('/roupa/' + id, { method: 'DELETE' });
+        carregar();
+    }
+
+    function limpar() {
+        ['id', 'tamanho', 'cor', 'marca', 'especificacao'].forEach(c => document.getElementById(c).value = '');
+        document.getElementById('tituloForm').innerText = 'Nova roupa';
+    }
+
+    function sair() {
+        sessionStorage.removeItem('logado');
+        window.location.href = 'login.html';
+    }
+
+    carregar();
+</script>
+</body>
+</html>

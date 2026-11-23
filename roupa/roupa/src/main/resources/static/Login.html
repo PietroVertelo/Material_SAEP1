@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login</title>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body class="login-pagina">
+<div class="login-card">
+    <h1>Loja de Roupas</h1>
+    <p>Acesse para gerenciar o estoque</p>
+
+    <div class="abas">
+        <button id="abaEntrar" class="ativa" onclick="trocar('entrar')">Entrar</button>
+        <button id="abaCadastrar" onclick="trocar('cadastrar')">Cadastrar</button>
+    </div>
+
+    <div id="campoNome" style="display:none">
+        <label>Nome</label>
+        <input id="nome" type="text" placeholder="Seu nome">
+    </div>
+
+    <label>Email</label>
+    <input id="email" type="email" placeholder="voce@email.com">
+
+    <label>Senha</label>
+    <input id="senha" type="password" placeholder="••••••••">
+
+    <button class="btn" id="botao" onclick="enviar()">Entrar</button>
+    <div class="msg" id="msg"></div>
+</div>
+
+<script>
+    let modo = 'entrar';
+
+    function trocar(novoModo) {
+        modo = novoModo;
+        document.getElementById('abaEntrar').classList.toggle('ativa', modo === 'entrar');
+        document.getElementById('abaCadastrar').classList.toggle('ativa', modo === 'cadastrar');
+        document.getElementById('campoNome').style.display = modo === 'cadastrar' ? 'block' : 'none';
+        document.getElementById('botao').innerText = modo === 'entrar' ? 'Entrar' : 'Criar conta';
+        mostrar('', '');
+    }
+
+    function mostrar(texto, tipo) {
+        const m = document.getElementById('msg');
+        m.innerText = texto;
+        m.className = 'msg ' + tipo;
+    }
+
+    async function enviar() {
+        const dados = {
+            nome: document.getElementById('nome').value,
+            email: document.getElementById('email').value,
+            senha: document.getElementById('senha').value
+        };
+
+        if (!dados.email || !dados.senha) { mostrar('Preencha email e senha', 'erro'); return; }
+
+        const resp = await fetch('/usuario/' + modo, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        const deuCerto = await resp.json();   // o back devolve true ou false
+
+        if (modo === 'entrar') {
+            if (deuCerto) {
+                sessionStorage.setItem('logado', dados.email);
+                window.location.href = 'index.html';
+            } else {
+                mostrar('Email ou senha incorretos', 'erro');
+            }
+        } else {
+            if (deuCerto) {
+                mostrar('Conta criada! Agora é só entrar.', 'ok');
+                trocar('entrar');
+                mostrar('Conta criada! Agora é só entrar.', 'ok');
+            } else {
+                mostrar('Esse email já está cadastrado', 'erro');
+            }
+        }
+    }
+</script>
+</body>
+</html>
